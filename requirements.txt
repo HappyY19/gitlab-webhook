@@ -1,2 +1,4 @@
 CheckmarxPythonSDK == 0.5.9
 Flask == 2.2.2
+pywin32 == 304
+waitress == 2.1.2
