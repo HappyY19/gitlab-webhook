@@ -17,11 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from http import HTTPStatus
-from flask import Flask, request, jsonify
-from logging.config import dictConfig
 import os
-
+from http import HTTPStatus
+from flask import Flask, request, jsonify, abort
+from logging.config import dictConfig
 from CheckmarxPythonSDK.CxRestAPISDK import ProjectsAPI
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'WARN')
@@ -45,14 +44,12 @@ dictConfig({
 })
 
 app = Flask(__name__)
-cx = ProjectsAPI()
-
 GITLAB_TOKEN = os.environ['GITLAB_TOKEN']
+
 
 class PushEvent:
 
     def __init__(self, data):
-
         self.before = data['before']
         self.after = data['after']
         self.ref = data['ref']
@@ -65,9 +62,7 @@ class PushEvent:
         bits = self.ref.split('/')
         self.branch_name = bits[-1]
 
-
     def format(self, pattern):
-
         pattern = pattern.replace('{branch_name}', self.branch_name)
         pattern = pattern.replace('{project_name}', self.project_name)
         pattern = pattern.replace('{project_namespace}', self.project_name)
@@ -75,6 +70,7 @@ class PushEvent:
                                   self.project_path_with_namespace)
         pattern = pattern.replace('/', '-')
         return pattern
+
 
 @app.route('/env', methods=['GET'])
 def env():
@@ -85,7 +81,7 @@ def env():
 @app.route('/health', methods=['GET'])
 def health():
     app.logger.debug('Calling /health')
-    return jsonify({'message':'healthy'}), HTTPStatus.OK
+    return jsonify({'message': 'healthy'}), HTTPStatus.OK
 
 
 @app.route('/webhook', methods=['POST'])
@@ -96,6 +92,7 @@ def webhook():
     else:
         abort(400)
 
+
 def handle_post():
     app.logger.info('handle_post: starting')
     try:
@@ -104,7 +101,7 @@ def handle_post():
         else:
             return warn('bad token', HTTPStatus.UNAUTHORIZED)
     finally:
-            app.logger.info('handle_post: ending')
+        app.logger.info('handle_post: ending')
 
 
 def validate_token():
@@ -122,18 +119,26 @@ def handle_push_event():
         return warn('Required fields missing from request body', HTTPStatus.BAD_REQUEST)
 
     if int(push_event.after, 16) == 0 and push_event.checkout_sha is None:
-            return handle_branch_deletion(push_event)
+        return handle_branch_deletion(push_event)
     else:
         app.logger.debug('Not a branch deletion push event')
         return '', HTTPStatus.NO_CONTENT
+
+
+@app.route('/projects', methods=['GET'])
+def projects():
+    app.logger.debug('Calling /projects')
+    project_names = [project.name for project in ProjectsAPI().get_all_project_details()]
+    return jsonify(project_names), HTTPStatus.OK
 
 
 def handle_branch_deletion(push_event):
     app.logger.debug('Handling branch deletion')
     cx_project_name = push_event.format(CX_PROJECT_PATTERN)
     matches = []
-    projects = cx.get_all_project_details()
     try:
+        cx = ProjectsAPI()
+        projects = cx.get_all_project_details()
         for project in projects:
             if project.name == cx_project_name:
                 matches.append(project)
