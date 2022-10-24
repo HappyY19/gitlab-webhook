@@ -1,56 +1,51 @@
-# Note
-Deploy Python application as a Windows Service requires to use pywin32.
-According to document of pywin32, running Python application as a Windows Service requires Python to be installed in a 
-location where the user running the service has access to the installation and is able to load pywintypesXX.dll and 
-pythonXX.dll.
+# Deploy the Flask Application as a Windows Service
 
-We will choose the 'System' Python to run the application. We will use Python3.
+Deploy a Python application as a Windows Service requires to use pywin32. According to document of pywin32, running 
+Python application as a Windows Service requires Python to be installed in a location where the user running the service
+has access to the installation and is able to load pywintypesXX.dll and pythonXX.dll.
 
-We will use waitress as the Python WSGI server to server the Flask application.
+## Install Python for All Users
 
-# Steps to deploy
+We will choose the 'System' Python to run the application, and We will use Python3. During installation of Python, in 
+the Python installer wizard, choose Customize Installation, and select "Add python.exe to PATH". In the Advanced Options
+step, choose install python for all users. Copy the python installation folder e.g. "C:\Program Files\Python3", as we 
+will use it later.
 
-## Start a CMD with Administrator Permission
+We will use [waitress](https://flask.palletsprojects.com/en/2.2.x/deploying/waitress/) as the Python WSGI server to 
+serve the Flask application.
 
-In Windows Search box, type 'command prompt', right-click the command prompt, run as administrator
+## Deploy the Windows Service
 
-## install pypi packages
+### Start a CMD with Administrator Permission
 
-`python -m pip install -r requirements.txt`
+In Windows Search box, type 'command prompt', right-click the command prompt, run as administrator.
 
-Here is the contents of requirements.txt
+### Start a New CMD as LocalSystem User
+
+The Windows Service will be run as LocalSystem user. Copy and paste the following command, and run it. It would start a 
+new Command Prompt as the LocalSystem user. 
+
+```commandline
+psexec.exe -s -i cmd.exe
 ```
-CheckmarxPythonSDK == 0.5.9
-Flask == 2.2.2
-pywin32 == 304
-waitress == 2.1.2
+
+### Run the Batch Script to Install and Start the Windows Service 
+
+in the new Command Prompt, go to the gitlab-webhook folder, run the deploy_win_service.bat batch script with arguments:
+
+deploy_win_service.bat "<GITLAB_TOKEN>" "<CHECKMARX_BASE_URL>" "<CHECKMARX_USERNAME>" "<PYTHON_INSTALLATION_FOLDER>" 
+
+for example:
+```commandline
+deploy_win_service.bat "a1b2c3" "http://happyy-laptop" "Admin" "C:\Program Files\Python3"
 ```
 
-## run pywin32_postinstall script
 
-`python "C:\Program Files\Python3\Scripts\pywin32_postinstall.py"  -install`
+# Delete Windows Service and Remove Dependencies
 
-You will see the following messages: 
+delete_win_service.bat "<PYTHON_INSTALLATION_FOLDER>" 
 
-Copied pythoncom37.dll to C:\WINDOWS\system32\pythoncom37.dll
-
-Copied pywintypes37.dll to C:\WINDOWS\system32\pywintypes37.dll
-
-## Install the Windows Service
-
-`python cx_flask_service.py install`
-
-## Start the Windows Service
-You can use `python cx_flask_service.py start` or `net start CxFlaskService` to start the Windows Service
-
-
-# Other command to Manage Windows Service
-
-## Stop the Windows Service
-`python cx_flask_service.py stop` or `net stop CxFlaskService`
-
-## update the service if the code has changed
-`python cx_flask_service.py update` 
-
-## Delete the Windows Service
-`python cx_flask_service.py remove` or `sc delete CxFlaskService`
+for example:
+```commandline
+delete_win_service.bat "C:\Program Files\Python3"
+```
