@@ -1,6 +1,6 @@
-# gitlab-webhook-flask.py
+# gitlab_webhook_flask.py
 #
-# A hanfler for GitLab Webhooks. Currently only handles push events
+# A handler for GitLab Webhooks. Currently only handles push events
 # sent upon branch deletion.
 #
 # Copyright 2021 Checkmarx
@@ -138,8 +138,8 @@ def handle_branch_deletion(push_event):
     matches = []
     try:
         cx = ProjectsAPI()
-        projects = cx.get_all_project_details()
-        for project in projects:
+        cx_projects = cx.get_all_project_details()
+        for project in cx_projects:
             if project.name == cx_project_name:
                 matches.append(project)
 
